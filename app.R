@@ -9,25 +9,26 @@ library(dplyr)
 
 library(h3jsr)         # H3 geospatial indexing
 
+# https://www.r-bloggers.com/2025/06/containerizing-shiny-apps-with-shiny2docker-a-step-by-step-guide/
+
 fire_prob_6 <- readRDS("data/fire_prob_6.rds")
 fire_prob_8 <- readRDS("data/fire_prob_8.rds")
 
-fire_prob_8 <- fire_prob_8 |> 
-  mutate(NDVI_T = case_when(NDVI_T < 0 ~ 0,
-                            NDVI_T > 1 ~ NA,
-                            TRUE ~ NDVI_T))
-
 h3_6 <- readRDS("data/h3_6.rds")
 h3_8 <- readRDS("data/h3_8.rds")
+NDVI_stat <- readRDS("data/NDVI_stat.rds") |> 
+  rename(h3_8_address = 1)
 
 h3_8 <- h3_8 %>% bind_cols(fire_prob_8 %>% select(h3_8_address))
 
+fire_prob_8 <- fire_prob_8 |> inner_join(NDVI_stat, by = "h3_8_address")
+
 bins <- c(0, 0.2, 0.4, 0.6, 0.8, 1)
-bins_ndvi <- c(0, 0.1, 0.2, 0.3, 0.4, 1)
+bins_ndvi <- c(0, 0.05, 0.1, 0.15, 0.2, 0.25)
 
 pal_6 <- colorBin("YlOrRd", domain = fire_prob_6$fireprob_avg, bins = bins)
 pal_8 <- colorBin("YlOrRd", domain = fire_prob_8$fireprob, bins = bins)
-pal_8_ndvi <- colorBin("Greens", domain = fire_prob_8$NDVI_T, bins = bins_ndvi)
+pal_8_ndvi <- colorBin("Greens", domain = fire_prob_8$NDVI_sdev, bins = bins_ndvi)
 
 STADIA_API_KEY <- "10723f7e-133c-48a1-9228-9ad8c5ca7c83"
 
@@ -70,18 +71,15 @@ ui <- fluidPage(
                 # Inspect the file that was loaded by selecting columns
                 
                   tabPanel("Overview",
-                        h2('Overview'),
                         actionButton("reset_button", "Reset view"),
                         leafletOutput("map", height = "600px")
                   ), 
                 
                   tabPanel("Detail", 
-                         h2("Detail"),
                          leafletOutput("map_detail", height = "600px")
                   ),
                 
-                tabPanel("Detail_NDVI", 
-                         h2("Detail_NDVI"),
+                tabPanel("NDVI stdev", 
                          leafletOutput("map_ndvi_detail", height = "600px")
                 ) 
                 )
@@ -210,16 +208,16 @@ server <- function(input, output, session) {
         setView(lng = click$lng, lat = click$lat, zoom = 11) %>%
         clearMarkers() %>%
         addPolygons(data = h3_8_filtered(), weight = 0, 
-                    fillColor = ~pal_8_ndvi(fire_prob_8_filtered()$NDVI_T), 
+                    fillColor = ~pal_8_ndvi(fire_prob_8_filtered()$NDVI_sdev), 
                     opacity = 0.2, 
-                    label = ~paste0("NDVI_T: ", format(fire_prob_8_filtered()$NDVI_T,digits = 2, nsmall = 2)),
+                    label = ~paste0("NDVI_sdev: ", format(fire_prob_8_filtered()$NDVI_sdev,digits = 2, nsmall = 2)),
                     highlightOptions = highlightOptions(color = "red",      
                                                         weight = 0,         
                                                         bringToFront = TRUE)
         ) %>% 
-        addLegend(pal = pal_6,
-                  values = fire_prob_8_filtered()$NDVI_T, 
-                  position = "bottomright", title = "NDVI T"
+        addLegend(pal = pal_8_ndvi,
+                  values = fire_prob_8_filtered()$NDVI_sdev, 
+                  position = "bottomright", title = "NDVI sdev"
         ) %>%
         addMarkers(lng = click$lng, lat = click$lat,
                    popup = paste0("Lat: ", round(click$lat, 5),
