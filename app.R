@@ -30,6 +30,8 @@ pal_6 <- colorBin("YlOrRd", domain = fire_prob_6$fireprob_avg, bins = bins)
 pal_8 <- colorBin("YlOrRd", domain = fire_prob_8$fireprob, bins = bins)
 pal_8_ndvi <- colorBin("Greens", domain = fire_prob_8$NDVI_sdev, bins = bins_ndvi)
 
+STADIA_API_KEY <- "10723f7e-133c-48a1-9228-9ad8c5ca7c83"
+
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
@@ -99,7 +101,9 @@ server <- function(input, output, session) {
   output$map <- renderLeaflet({
     
     leaflet() %>%
-      addProviderTiles(providers$Esri.WorldGrayCanvas)
+      addProviderTiles(providers$Stadia.StamenTonerLite,
+                       options = providerTileOptions(apiKey = STADIA_API_KEY)
+                       )
 
   })
   
@@ -170,7 +174,9 @@ server <- function(input, output, session) {
 
     output$map_detail <- renderLeaflet({
         leaflet() %>%
-        addProviderTiles(providers$Esri.WorldGrayCanvas) %>%
+        addProviderTiles(providers$Stadia.StamenTonerLite,
+                         options = providerTileOptions(apiKey = STADIA_API_KEY)
+        ) %>%
           setView(lng = click$lng, lat = click$lat, zoom = 11) %>%
           clearMarkers() %>%
           addPolygons(data = h3_8_filtered(), weight = 0, 
@@ -193,7 +199,9 @@ server <- function(input, output, session) {
     
     output$map_ndvi_detail <- renderLeaflet({
       leaflet() %>%
-        addProviderTiles(providers$Esri.WorldGrayCanvas) %>%
+        addProviderTiles(providers$Stadia.StamenTonerLite,
+                         options = providerTileOptions(apiKey = STADIA_API_KEY)
+        ) %>%
         setView(lng = click$lng, lat = click$lat, zoom = 11) %>%
         clearMarkers() %>%
         addPolygons(data = h3_8_filtered(), weight = 0, 
