@@ -1,11 +1,3 @@
-#
-# This is a Shiny web application. You can run the application by clicking
-# the 'Run App' button above.
-#
-# Find out more about building applications with Shiny here:
-#
-#    https://shiny.posit.co/
-#
 
 library(shiny)
 library(sf)
@@ -16,7 +8,6 @@ library(leaflet.extras)
 library(dplyr)
 
 library(h3jsr)         # H3 geospatial indexing
-library(geosphere)  # Distance calculations
 
 fire_prob_6 <- readRDS("data/fire_prob_6.rds")
 fire_prob_8 <- readRDS("data/fire_prob_8.rds")
@@ -30,6 +21,7 @@ bins <- c(0, 0.2, 0.4, 0.6, 0.8, 1)
 pal_6 <- colorBin("YlOrRd", domain = fire_prob_6$fireprob_avg, bins = bins)
 pal_8 <- colorBin("YlOrRd", domain = fire_prob_8$fireprob, bins = bins)
 
+STADIA_API_KEY <- "10723f7e-133c-48a1-9228-9ad8c5ca7c83"
 
 
 # Define UI for application that draws a histogram
@@ -98,7 +90,10 @@ server <- function(input, output, session) {
   output$map <- renderLeaflet({
     
     leaflet() %>%
-      addProviderTiles(providers$Stadia.StamenTonerLite)
+      addProviderTiles(providers$Stadia.StamenTonerLite,  # You can change to other Stadia styles
+                       options = providerTileOptions(
+                         apiKey = STADIA_API_KEY
+                       ))
 
   })
   
@@ -171,7 +166,10 @@ server <- function(input, output, session) {
 
     output$map_detail <- renderLeaflet({
         leaflet() %>%
-          addProviderTiles(providers$Stadia.StamenTonerLite) %>%
+          addProviderTiles(providers$Stadia.StamenTonerLite,  # You can change to other Stadia styles
+                           options = providerTileOptions(
+                             apiKey = STADIA_API_KEY
+                           )) %>%
           setView(lng = click$lng, lat = click$lat, zoom = 11) %>%
           clearMarkers() %>%
           addPolygons(data = h3_8_filtered(), weight = 0, 
